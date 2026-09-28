@@ -8,7 +8,7 @@ class OrderStatus(StrEnum):
     NEW = "NEW"
     PAID = "PAID"
     SHIPPED = "SHIPPED"
-    CANCELED = "CANCELED"
+    CANCELLED = "CANCELLED"
 
 
 @dataclass
