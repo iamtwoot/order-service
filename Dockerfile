@@ -10,4 +10,4 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "-m", "bin.api"]
+CMD ["sh", "-c", "alembic upgrade head && python -m bin.api"]
