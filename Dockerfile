@@ -6,6 +6,8 @@ RUN pip install uv
 
 COPY . .
 
-RUN uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
-CMD ["uv", "run", "python", "-m", "bin.api"]
+ENV PATH="/app/.venv/bin:$PATH"
+
+CMD ["python", "-m", "bin.api"]
