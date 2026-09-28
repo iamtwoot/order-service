@@ -20,3 +20,4 @@ force-exclude = true
 
 [tool.mypy]
 exclude = ["migrations/"]
+explicit_package_bases = true
