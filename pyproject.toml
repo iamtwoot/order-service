@@ -3,7 +3,11 @@ name = "order-service"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "asyncpg>=0.31.0",
+    "dependency-injector>=4.49.1",
     "fastapi>=0.141.1",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy[asyncio]>=2.1.1",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -21,3 +25,4 @@ force-exclude = true
 [tool.mypy]
 exclude = ["migrations/"]
 explicit_package_bases = true
+plugins = ["pydantic.mypy"]
