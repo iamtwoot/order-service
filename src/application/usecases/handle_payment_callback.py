@@ -24,7 +24,7 @@ class HandlePaymentCallback(HandlePaymentCallbackPort):
                 order.mark_paid() if data.succeeded else order.mark_payment_failed()
             )
             if not changed:
-                logger.info("Repeated callback for order %s ignores", order.id)
+                logger.info("Repeated callback for order %s ignored", order.id)
 
             await uow.orders.update(order)
             await uow.commit()
