@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     CAPASHINO_URL: str
     CAPASHINO_API_TOKEN: str
     PAYMENTS_CALLBACK_URL: str
+    KAFKA_BOOTSTRAP_SERVERS: str
+    KAFKA_ORDER_EVENTS_TOPIC: str = "student_system-order.events"
 
     @property
     def async_database_url(self) -> str:

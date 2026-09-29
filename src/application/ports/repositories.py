@@ -37,3 +37,10 @@ class OutboxMessage:
 class OutboxRepository(ABC):
     @abstractmethod
     async def add(self, message: OutboxMessage) -> None: ...
+
+    @abstractmethod
+    async def get_pending(self, limit: int) -> list[OutboxMessage]:
+        """Lock returned rows until commit; rows locked by others are skipped."""
+
+    @abstractmethod
+    async def mark_sent(self, message_ids: list[UUID]) -> None: ...

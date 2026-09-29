@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +56,26 @@ class SQLAlchemyOutboxRepository(OutboxRepository):
                 payload=message.payload,
                 created_at=datetime.now(UTC),
             )
+        )
+
+    async def get_pending(self, limit: int) -> list[OutboxMessage]:
+        models = await self._session.scalars(
+            select(OutboxModel)
+            .where(OutboxModel.sent_at.is_(None))
+            .order_by(OutboxModel.created_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return [
+            OutboxMessage(id=model.id, key=model.key, payload=model.payload)
+            for model in models
+        ]
+
+    async def mark_sent(self, message_ids: list[UUID]) -> None:
+        await self._session.execute(
+            update(OutboxModel)
+            .where(OutboxModel.id.in_(message_ids))
+            .values(sent_at=datetime.now(UTC))
         )
 
 

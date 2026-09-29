@@ -32,3 +32,8 @@ class PaymentCallbackInput:
 class HandlePaymentCallbackPort(ABC):
     @abstractmethod
     async def __call__(self, data: PaymentCallbackInput) -> None: ...
+
+
+class PublishOutboxMessagesPort(ABC):
+    @abstractmethod
+    async def __call__(self) -> int: ...
