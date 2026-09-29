@@ -1,8 +1,10 @@
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.ports.repositories import OrderRepository
+from src.application.ports.repositories import OrderAlreadyExists, OrderRepository
 from src.domain.entities import Order, OrderStatus
 from src.infrastructure.persistence.models import OrderModel
 
@@ -13,9 +15,19 @@ class SQLAlchemyOrderRepository(OrderRepository):
 
     async def add(self, order: Order) -> None:
         self._session.add(_to_model(order))
+        try:
+            await self._session.flush()
+        except IntegrityError as e:
+            raise OrderAlreadyExists(order.idempotency_key) from e
 
     async def get_by_id(self, order_id: UUID) -> Order | None:
         model = await self._session.get(OrderModel, order_id)
+        return _to_entity(model) if model else None
+
+    async def get_by_idempotency_key(self, key: str) -> Order | None:
+        model = await self._session.scalar(
+            select(OrderModel).where(OrderModel.idempotency_key == key)
+        )
         return _to_entity(model) if model else None
 
 

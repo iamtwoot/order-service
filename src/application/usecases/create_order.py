@@ -1,4 +1,5 @@
 from src.application.ports.clients import CatalogClient
+from src.application.ports.repositories import OrderAlreadyExists
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import CreateOrderInput, CreateOrderPort
 from src.domain.entities import Order
@@ -11,6 +12,9 @@ class CreateOrder(CreateOrderPort):
         self._catalog = catalog
 
     async def __call__(self, data: CreateOrderInput) -> Order:
+        if existing := await self._find_by_key(data.idempotency_key):
+            return existing
+
         item = await self._catalog.get_item(data.item_id)
         if item is None:
             raise ItemNotFound(data.item_id)
@@ -23,7 +27,16 @@ class CreateOrder(CreateOrderPort):
             quantity=data.quantity,
             idempotency_key=data.idempotency_key,
         )
-        async with self._uow as uow:
-            await uow.orders.add(order)
-            await uow.commit()
+        try:
+            async with self._uow as uow:
+                await uow.orders.add(order)
+                await uow.commit()
+        except OrderAlreadyExists:
+            if existing := await self._find_by_key(data.idempotency_key):
+                return existing
+            raise
         return order
+
+    async def _find_by_key(self, key: str) -> Order | None:
+        async with self._uow as uow:
+            return await uow.orders.get_by_idempotency_key(key)
