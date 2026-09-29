@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import httpx
 
 from src.application.ports.clients import CatalogClient, CatalogItem, CatalogUnavailable
@@ -13,7 +15,9 @@ class HttpCatalogClient(CatalogClient):
 
     async def get_item(self, item_id: str) -> CatalogItem | None:
         try:
-            response = await self._client.get(f"/api/catalog/items/{item_id}")
+            response = await self._client.get(
+                f"/api/catalog/items/{quote(item_id, safe='')}"
+            )
         except httpx.TransportError as e:
             raise CatalogUnavailable(str(e)) from e
 
