@@ -5,9 +5,14 @@ from dependency_injector.wiring import Provide
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.application.ports.usecases import CreateOrderPort, GetOrderPort
+from src.application.ports.usecases import (
+    CreateOrderPort,
+    GetOrderPort,
+    HandlePaymentCallbackPort,
+)
 from src.application.usecases.create_order import CreateOrder
 from src.application.usecases.get_order import GetOrder
+from src.application.usecases.handle_payment_callback import HandlePaymentCallback
 from src.infrastructure.http.catalog import HttpCatalogClient
 from src.infrastructure.http.payments import HttpPaymentsClient
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
@@ -43,6 +48,11 @@ class Container(containers.DeclarativeContainer):
     )
     get_order = providers.Factory(GetOrder, uow=uow)
 
+    handle_payment_callback = providers.Factory(HandlePaymentCallback, uow=uow)
+
 
 CreateOrderDep = Annotated[CreateOrderPort, Depends(Provide[Container.create_order])]
 GetOrderDep = Annotated[GetOrderPort, Depends(Provide[Container.get_order])]
+HandlePaymentCallbackDep = Annotated[
+    HandlePaymentCallbackPort, Depends(Provide[Container.handle_payment_callback])
+]

@@ -14,7 +14,9 @@ class OrderRepository(ABC):
         """Raise OrderAlreadyExists if idempotency_key is already taken."""
 
     @abstractmethod
-    async def get_by_id(self, order_id: UUID) -> Order | None: ...
+    async def get_by_id(
+        self, order_id: UUID, *, for_update: bool = False
+    ) -> Order | None: ...
 
     @abstractmethod
     async def get_by_idempotency_key(self, key: str) -> Order | None: ...

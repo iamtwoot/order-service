@@ -1,4 +1,6 @@
 from datetime import datetime
+from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,3 +25,11 @@ class OrderResponse(BaseModel):
     status: OrderStatus
     created_at: datetime
     updated_at: datetime
+
+
+class PaymentCallbackRequest(BaseModel):
+    payment_id: str
+    order_id: UUID
+    status: Literal["succeeded", "failed"]
+    amount: Decimal
+    error_message: str | None = None

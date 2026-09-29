@@ -12,3 +12,7 @@ class ItemNotFound(DomainError):
 
 class InsufficientStock(DomainError):
     pass
+
+
+class InvalidStatusTransition(DomainError):
+    pass

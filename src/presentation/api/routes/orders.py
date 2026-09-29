@@ -4,10 +4,23 @@ from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException, status
 
 from src.application.ports.clients import CatalogUnavailable
-from src.application.ports.usecases import CreateOrderInput
-from src.domain.exceptions import InsufficientStock, ItemNotFound, OrderNotFound
-from src.presentation.api.dependencies import CreateOrderDep, GetOrderDep
-from src.presentation.api.schemas import CreateOrderRequest, OrderResponse
+from src.application.ports.usecases import CreateOrderInput, PaymentCallbackInput
+from src.domain.exceptions import (
+    InsufficientStock,
+    InvalidStatusTransition,
+    ItemNotFound,
+    OrderNotFound,
+)
+from src.presentation.api.dependencies import (
+    CreateOrderDep,
+    GetOrderDep,
+    HandlePaymentCallbackDep,
+)
+from src.presentation.api.schemas import (
+    CreateOrderRequest,
+    OrderResponse,
+    PaymentCallbackRequest,
+)
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -36,6 +49,25 @@ async def create_order(
             status.HTTP_503_SERVICE_UNAVAILABLE, "Catalog service unavailable"
         ) from None
     return OrderResponse.model_validate(order)
+
+
+@router.post("/payment-callback")
+@inject
+async def payment_callback(
+    body: PaymentCallbackRequest,
+    handle_payment_callback: HandlePaymentCallbackDep,
+) -> None:
+    try:
+        await handle_payment_callback(
+            PaymentCallbackInput(
+                order_id=body.order_id,
+                succeeded=body.status == "succeeded",
+            )
+        )
+    except OrderNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found") from None
+    except InvalidStatusTransition as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from None
 
 
 @router.get("/{order_id}")

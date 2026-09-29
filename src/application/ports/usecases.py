@@ -21,3 +21,14 @@ class CreateOrderPort(ABC):
 class GetOrderPort(ABC):
     @abstractmethod
     async def __call__(self, order_id: UUID) -> Order: ...
+
+
+@dataclass(frozen=True)
+class PaymentCallbackInput:
+    order_id: UUID
+    succeeded: bool
+
+
+class HandlePaymentCallbackPort(ABC):
+    @abstractmethod
+    async def __call__(self, data: PaymentCallbackInput) -> None: ...

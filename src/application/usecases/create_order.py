@@ -1,3 +1,5 @@
+import logging
+
 from src.application.ports.clients import (
     CatalogClient,
     PaymentCreationFailed,
@@ -8,6 +10,8 @@ from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import CreateOrderInput, CreateOrderPort
 from src.domain.entities import Order
 from src.domain.exceptions import InsufficientStock, ItemNotFound
+
+logger = logging.getLogger(__name__)
 
 
 class CreateOrder(CreateOrderPort):
@@ -50,10 +54,14 @@ class CreateOrder(CreateOrderPort):
                 idempotency_key=str(order.id),
             )
         except PaymentCreationFailed:
-            order.cancel()
+            logger.warning("Payment not created, cancelling order %s", order.id)
+            order.mark_payment_failed()
             async with self._uow as uow:
                 await uow.orders.update(order)
                 await uow.commit()
+
+        else:
+            logger.info("Order %s created, payment requested", order.id)
 
         return order
 

@@ -20,8 +20,12 @@ class SQLAlchemyOrderRepository(OrderRepository):
         except IntegrityError as e:
             raise OrderAlreadyExists(order.idempotency_key) from e
 
-    async def get_by_id(self, order_id: UUID) -> Order | None:
-        model = await self._session.get(OrderModel, order_id)
+    async def get_by_id(
+        self, order_id: UUID, *, for_update: bool = False
+    ) -> Order | None:
+        model = await self._session.get(
+            OrderModel, order_id, with_for_update=for_update
+        )
         return _to_entity(model) if model else None
 
     async def get_by_idempotency_key(self, key: str) -> Order | None:
