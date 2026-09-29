@@ -3,8 +3,9 @@ from uuid import UUID
 from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException, status
 
+from src.application.ports.clients import CatalogUnavailable
 from src.application.ports.usecases import CreateOrderInput
-from src.domain.exceptions import OrderNotFound
+from src.domain.exceptions import InsufficientStock, ItemNotFound, OrderNotFound
 from src.presentation.api.dependencies import CreateOrderDep, GetOrderDep
 from src.presentation.api.schemas import CreateOrderRequest, OrderResponse
 
@@ -17,14 +18,23 @@ async def create_order(
     body: CreateOrderRequest,
     create_order: CreateOrderDep,
 ) -> OrderResponse:
-    order = await create_order(
-        CreateOrderInput(
-            user_id=body.user_id,
-            item_id=body.item_id,
-            quantity=body.quantity,
-            idempotency_key=body.idempotency_key,
+    try:
+        order = await create_order(
+            CreateOrderInput(
+                user_id=body.user_id,
+                item_id=str(body.item_id),
+                quantity=body.quantity,
+                idempotency_key=body.idempotency_key,
+            )
         )
-    )
+    except ItemNotFound:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Item not found") from None
+    except InsufficientStock:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Insufficient stock") from None
+    except CatalogUnavailable:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Catalog service unavailable"
+        ) from None
     return OrderResponse.model_validate(order)
 
 

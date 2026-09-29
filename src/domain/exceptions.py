@@ -4,3 +4,11 @@ class DomainError(Exception):
 
 class OrderNotFound(DomainError):
     pass
+
+
+class ItemNotFound(DomainError):
+    pass
+
+
+class InsufficientStock(DomainError):
+    pass

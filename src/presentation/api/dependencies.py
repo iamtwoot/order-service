@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from src.application.ports.usecases import CreateOrderPort, GetOrderPort
 from src.application.usecases.create_order import CreateOrder
 from src.application.usecases.get_order import GetOrder
+from src.infrastructure.http.catalog import HttpCatalogClient
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
 from src.settings import Settings
 
@@ -23,7 +24,13 @@ class Container(containers.DeclarativeContainer):
 
     uow = providers.Factory(SQLAlchemyUnitOfWork, session_factory=session_factory)
 
-    create_order = providers.Factory(CreateOrder, uow=uow)
+    catalog = providers.Singleton(
+        HttpCatalogClient,
+        base_url=settings.provided.CAPASHINO_URL,
+        api_token=settings.provided.CAPASHINO_API_TOKEN,
+    )
+
+    create_order = providers.Factory(CreateOrder, uow=uow, catalog=catalog)
     get_order = providers.Factory(GetOrder, uow=uow)
 
 

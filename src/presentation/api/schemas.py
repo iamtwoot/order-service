@@ -8,7 +8,7 @@ from src.domain.entities import OrderStatus
 
 class CreateOrderRequest(BaseModel):
     user_id: str = Field(min_length=1)
-    item_id: str = Field(min_length=1)
+    item_id: UUID
     quantity: int = Field(gt=0)
     idempotency_key: str = Field(min_length=1)
 
