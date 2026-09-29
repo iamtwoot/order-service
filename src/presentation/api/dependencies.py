@@ -13,8 +13,10 @@ from src.application.ports.usecases import (
 from src.application.usecases.create_order import CreateOrder
 from src.application.usecases.get_order import GetOrder
 from src.application.usecases.handle_payment_callback import HandlePaymentCallback
+from src.application.usecases.publish_outbox_messages import PublishOutboxMessages
 from src.infrastructure.http.catalog import HttpCatalogClient
 from src.infrastructure.http.payments import HttpPaymentsClient
+from src.infrastructure.messaging.kafka import KafkaPublisher
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
 from src.settings import Settings
 
@@ -49,6 +51,15 @@ class Container(containers.DeclarativeContainer):
     get_order = providers.Factory(GetOrder, uow=uow)
 
     handle_payment_callback = providers.Factory(HandlePaymentCallback, uow=uow)
+
+    publisher = providers.Singleton(
+        KafkaPublisher,
+        bootstrap_servers=settings.provided.KAFKA_BOOTSTRAP_SERVERS,
+        topic=settings.provided.KAFKA_ORDER_EVENTS_TOPIC,
+    )
+    publish_outbox_messages = providers.Factory(
+        PublishOutboxMessages, uow=uow, publisher=publisher
+    )
 
 
 CreateOrderDep = Annotated[CreateOrderPort, Depends(Provide[Container.create_order])]
