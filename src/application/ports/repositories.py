@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from uuid import UUID
+from dataclasses import dataclass, field
+from typing import Any
+from uuid import UUID, uuid4
 
 from src.domain.entities import Order
 
@@ -23,3 +25,15 @@ class OrderRepository(ABC):
 
     @abstractmethod
     async def update(self, order: Order) -> None: ...
+
+
+@dataclass(frozen=True)
+class OutboxMessage:
+    key: str
+    payload: dict[str, Any]
+    id: UUID = field(default_factory=uuid4)
+
+
+class OutboxRepository(ABC):
+    @abstractmethod
+    async def add(self, message: OutboxMessage) -> None: ...

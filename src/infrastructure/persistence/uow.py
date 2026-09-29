@@ -4,7 +4,10 @@ from typing import Self
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.application.ports.uow import UnitOfWork
-from src.infrastructure.persistence.repositories import SQLAlchemyOrderRepository
+from src.infrastructure.persistence.repositories import (
+    SQLAlchemyOrderRepository,
+    SQLAlchemyOutboxRepository,
+)
 
 
 class SQLAlchemyUnitOfWork(UnitOfWork):
@@ -16,6 +19,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
     async def __aenter__(self) -> Self:
         self._session = self._session_factory()
         self.orders = SQLAlchemyOrderRepository(self._session)
+        self.outbox = SQLAlchemyOutboxRepository(self._session)
         return self
 
     async def __aexit__(

@@ -1,12 +1,18 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.ports.repositories import OrderAlreadyExists, OrderRepository
+from src.application.ports.repositories import (
+    OrderAlreadyExists,
+    OrderRepository,
+    OutboxMessage,
+    OutboxRepository,
+)
 from src.domain.entities import Order, OrderStatus
-from src.infrastructure.persistence.models import OrderModel
+from src.infrastructure.persistence.models import OrderModel, OutboxModel
 
 
 class SQLAlchemyOrderRepository(OrderRepository):
@@ -36,6 +42,21 @@ class SQLAlchemyOrderRepository(OrderRepository):
 
     async def update(self, order: Order) -> None:
         await self._session.merge(_to_model(order))
+
+
+class SQLAlchemyOutboxRepository(OutboxRepository):
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(self, message: OutboxMessage) -> None:
+        self._session.add(
+            OutboxModel(
+                id=message.id,
+                key=message.key,
+                payload=message.payload,
+                created_at=datetime.now(UTC),
+            )
+        )
 
 
 def _to_model(order: Order) -> OrderModel:
