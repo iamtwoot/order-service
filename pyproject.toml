@@ -25,7 +25,7 @@ extend-exclude = ["alembic/versions"]
 force-exclude = true
 
 [tool.ruff.lint.isort]
-known-third-party = ["alembic"]
+known-third-party = ["alembic", "fastapi"]
 
 [tool.mypy]
 exclude = ["alembic/"]
