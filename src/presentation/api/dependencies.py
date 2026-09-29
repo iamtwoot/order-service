@@ -9,6 +9,7 @@ from src.application.ports.usecases import CreateOrderPort, GetOrderPort
 from src.application.usecases.create_order import CreateOrder
 from src.application.usecases.get_order import GetOrder
 from src.infrastructure.http.catalog import HttpCatalogClient
+from src.infrastructure.http.payments import HttpPaymentsClient
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
 from src.settings import Settings
 
@@ -30,7 +31,16 @@ class Container(containers.DeclarativeContainer):
         api_token=settings.provided.CAPASHINO_API_TOKEN,
     )
 
-    create_order = providers.Factory(CreateOrder, uow=uow, catalog=catalog)
+    payments = providers.Singleton(
+        HttpPaymentsClient,
+        base_url=settings.provided.CAPASHINO_URL,
+        api_token=settings.provided.CAPASHINO_API_TOKEN,
+        callback_url=settings.provided.PAYMENTS_CALLBACK_URL,
+    )
+
+    create_order = providers.Factory(
+        CreateOrder, uow=uow, catalog=catalog, payments=payments
+    )
     get_order = providers.Factory(GetOrder, uow=uow)
 
 

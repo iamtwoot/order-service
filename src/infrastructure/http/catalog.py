@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import httpx
 
 from src.application.ports.clients import CatalogClient, CatalogItem, CatalogUnavailable
@@ -24,4 +26,8 @@ class HttpCatalogClient(CatalogClient):
         response.raise_for_status()
 
         data = response.json()
-        return CatalogItem(id=data["id"], available_qty=data["available_qty"])
+        return CatalogItem(
+            id=data["id"],
+            price=Decimal(data["price"]),
+            available_qty=data["available_qty"],
+        )

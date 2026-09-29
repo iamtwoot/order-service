@@ -1,4 +1,8 @@
-from src.application.ports.clients import CatalogClient
+from src.application.ports.clients import (
+    CatalogClient,
+    PaymentCreationFailed,
+    PaymentsClient,
+)
 from src.application.ports.repositories import OrderAlreadyExists
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import CreateOrderInput, CreateOrderPort
@@ -7,9 +11,12 @@ from src.domain.exceptions import InsufficientStock, ItemNotFound
 
 
 class CreateOrder(CreateOrderPort):
-    def __init__(self, uow: UnitOfWork, catalog: CatalogClient) -> None:
+    def __init__(
+        self, uow: UnitOfWork, catalog: CatalogClient, payments: PaymentsClient
+    ) -> None:
         self._uow = uow
         self._catalog = catalog
+        self._payments = payments
 
     async def __call__(self, data: CreateOrderInput) -> Order:
         if existing := await self._find_by_key(data.idempotency_key):
@@ -35,6 +42,19 @@ class CreateOrder(CreateOrderPort):
             if existing := await self._find_by_key(data.idempotency_key):
                 return existing
             raise
+
+        try:
+            await self._payments.create_payment(
+                order_id=order.id,
+                amount=item.price * data.quantity,
+                idempotency_key=str(order.id),
+            )
+        except PaymentCreationFailed:
+            order.cancel()
+            async with self._uow as uow:
+                await uow.orders.update(order)
+                await uow.commit()
+
         return order
 
     async def _find_by_key(self, key: str) -> Order | None:

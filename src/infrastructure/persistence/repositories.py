@@ -30,6 +30,9 @@ class SQLAlchemyOrderRepository(OrderRepository):
         )
         return _to_entity(model) if model else None
 
+    async def update(self, order: Order) -> None:
+        await self._session.merge(_to_model(order))
+
 
 def _to_model(order: Order) -> OrderModel:
     return OrderModel(

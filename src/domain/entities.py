@@ -41,3 +41,7 @@ class Order:
             created_at=now,
             updated_at=now,
         )
+
+    def cancel(self) -> None:
+        self.status = OrderStatus.CANCELLED
+        self.updated_at = datetime.now(UTC)

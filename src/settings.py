@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     POSTGRES_CONNECTION_STRING: str
     CAPASHINO_URL: str
     CAPASHINO_API_TOKEN: str
+    PAYMENTS_CALLBACK_URL: str
 
     @property
     def async_database_url(self) -> str:
