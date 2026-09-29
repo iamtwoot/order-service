@@ -9,8 +9,6 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-RUN uv sync --frozen --no-dev
-
 ENV PATH="/app/.venv/bin:$PATH"
 
 CMD ["sh", "-c", "alembic upgrade head && python -m bin.api"]
