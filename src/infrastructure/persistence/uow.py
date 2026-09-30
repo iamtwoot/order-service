@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.application.ports.uow import UnitOfWork
 from src.infrastructure.persistence.repositories import (
+    SQLAlchemyInboxRepository,
     SQLAlchemyOrderRepository,
     SQLAlchemyOutboxRepository,
 )
@@ -20,6 +21,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         self._session = self._session_factory()
         self.orders = SQLAlchemyOrderRepository(self._session)
         self.outbox = SQLAlchemyOutboxRepository(self._session)
+        self.inbox = SQLAlchemyInboxRepository(self._session)
         return self
 
     async def __aexit__(

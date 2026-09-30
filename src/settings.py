@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     PAYMENTS_CALLBACK_URL: str
     KAFKA_BOOTSTRAP_SERVERS: str
     KAFKA_ORDER_EVENTS_TOPIC: str = "student_system-order.events"
+    KAFKA_SHIPMENT_EVENTS_TOPIC: str = "student_system-shipment.events"
+    KAFKA_CONSUMER_GROUP: str = "iamtwoot-order-service"
 
     @property
     def async_database_url(self) -> str:

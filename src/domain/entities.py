@@ -55,6 +55,9 @@ class Order:
     def mark_paid(self) -> bool:
         return self._transition_to(OrderStatus.PAID)
 
+    def mark_shipped(self) -> bool:
+        return self._transition_to(OrderStatus.SHIPPED)
+
     def mark_payment_failed(self) -> bool:
         if self.status == OrderStatus.PAID:
             raise InvalidStatusTransition("Paid order cannot fail payment")

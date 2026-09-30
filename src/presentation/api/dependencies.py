@@ -13,11 +13,13 @@ from src.application.ports.usecases import (
 from src.application.usecases.create_order import CreateOrder
 from src.application.usecases.get_order import GetOrder
 from src.application.usecases.handle_payment_callback import HandlePaymentCallback
+from src.application.usecases.handle_shipment_event import HandleShipmentEvent
 from src.application.usecases.publish_outbox_messages import PublishOutboxMessages
 from src.infrastructure.http.catalog import HttpCatalogClient
 from src.infrastructure.http.payments import HttpPaymentsClient
 from src.infrastructure.messaging.kafka import KafkaPublisher
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
+from src.presentation.workers.shipment_events import ShipmentEventConsumer
 from src.settings import Settings
 
 
@@ -59,6 +61,14 @@ class Container(containers.DeclarativeContainer):
     )
     publish_outbox_messages = providers.Factory(
         PublishOutboxMessages, uow=uow, publisher=publisher
+    )
+
+    shipment_event_consumer = providers.Singleton(
+        ShipmentEventConsumer,
+        bootstrap_servers=settings.provided.KAFKA_BOOTSTRAP_SERVERS,
+        topic=settings.provided.KAFKA_SHIPMENT_EVENTS_TOPIC,
+        group_id=settings.provided.KAFKA_CONSUMER_GROUP,
+        handle_event=providers.Factory(HandleShipmentEvent, uow=uow),
     )
 
 

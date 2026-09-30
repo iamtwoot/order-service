@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from src.domain.entities import Order
@@ -37,3 +38,16 @@ class HandlePaymentCallbackPort(ABC):
 class PublishOutboxMessagesPort(ABC):
     @abstractmethod
     async def __call__(self) -> int: ...
+
+
+@dataclass(frozen=True)
+class ShipmentEventInput:
+    message_id: str
+    order_id: UUID
+    shipped: bool
+    payload: dict[str, Any]
+
+
+class HandleShipmentEventPort(ABC):
+    @abstractmethod
+    async def __call__(self, data: ShipmentEventInput) -> None: ...

@@ -21,10 +21,14 @@ def create_app() -> FastAPI:
         outbox_worker = asyncio.create_task(
             run_outbox_worker(container.publish_outbox_messages())
         )
+        shipment_consumer = asyncio.create_task(
+            container.shipment_event_consumer().run()
+        )
         yield
-        outbox_worker.cancel()
-        with suppress(asyncio.CancelledError):
-            await outbox_worker
+        for task in (shipment_consumer, outbox_worker):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         await publisher.stop()
 
     app = FastAPI(title="Order Service", lifespan=lifespan)

@@ -44,3 +44,13 @@ class OutboxRepository(ABC):
 
     @abstractmethod
     async def mark_sent(self, message_ids: list[UUID]) -> None: ...
+
+
+class MessageAlreadyProcessed(Exception):
+    pass
+
+
+class InboxRepository(ABC):
+    @abstractmethod
+    async def add(self, message_id: str, payload: dict[str, Any]) -> None:
+        """Raises MessageAlreadyProcessed if message_id is already in the inbox."""

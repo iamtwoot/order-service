@@ -31,3 +31,11 @@ class OutboxModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InboxModel(Base):
+    __tablename__ = "inbox"
+
+    message_id: Mapped[str] = mapped_column(primary_key=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

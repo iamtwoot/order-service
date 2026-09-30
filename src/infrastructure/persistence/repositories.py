@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -6,13 +7,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.ports.repositories import (
+    InboxRepository,
+    MessageAlreadyProcessed,
     OrderAlreadyExists,
     OrderRepository,
     OutboxMessage,
     OutboxRepository,
 )
 from src.domain.entities import Order, OrderStatus
-from src.infrastructure.persistence.models import OrderModel, OutboxModel
+from src.infrastructure.persistence.models import InboxModel, OrderModel, OutboxModel
 
 
 class SQLAlchemyOrderRepository(OrderRepository):
@@ -77,6 +80,24 @@ class SQLAlchemyOutboxRepository(OutboxRepository):
             .where(OutboxModel.id.in_(message_ids))
             .values(sent_at=datetime.now(UTC))
         )
+
+
+class SQLAlchemyInboxRepository(InboxRepository):
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(self, message_id: str, payload: dict[str, Any]) -> None:
+        self._session.add(
+            InboxModel(
+                message_id=message_id,
+                payload=payload,
+                processed_at=datetime.now(UTC),
+            )
+        )
+        try:
+            await self._session.flush()
+        except IntegrityError as e:
+            raise MessageAlreadyProcessed(message_id) from e
 
 
 def _to_model(order: Order) -> OrderModel:
