@@ -27,6 +27,7 @@ class OutboxModel(Base):
     __tablename__ = "outbox"
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
+    destination: Mapped[str]
     key: Mapped[str]
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

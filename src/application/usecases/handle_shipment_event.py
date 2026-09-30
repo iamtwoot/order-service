@@ -3,6 +3,7 @@ import logging
 from src.application.ports.repositories import MessageAlreadyProcessed
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import HandleShipmentEventPort, ShipmentEventInput
+from src.application.services.notifications import status_notification
 from src.domain.exceptions import InvalidStatusTransition
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,9 @@ class HandleShipmentEvent(HandleShipmentEventPort):
 
             if changed:
                 await uow.orders.update(order)
+                await uow.outbox.add(
+                    status_notification(order, data.payload.get("reason")),
+                )
             await uow.commit()
 
         if changed:

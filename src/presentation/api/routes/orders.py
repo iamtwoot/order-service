@@ -62,6 +62,7 @@ async def payment_callback(
             PaymentCallbackInput(
                 order_id=body.order_id,
                 succeeded=body.status == "succeeded",
+                error_message=body.error_message,
             )
         )
     except OrderNotFound:

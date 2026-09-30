@@ -8,6 +8,7 @@ from src.application.ports.clients import (
 from src.application.ports.repositories import OrderAlreadyExists
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import CreateOrderInput, CreateOrderPort
+from src.application.services.notifications import status_notification
 from src.domain.entities import Order
 from src.domain.exceptions import InsufficientStock, ItemNotFound
 
@@ -41,6 +42,7 @@ class CreateOrder(CreateOrderPort):
         try:
             async with self._uow as uow:
                 await uow.orders.add(order)
+                await uow.outbox.add(status_notification(order))
                 await uow.commit()
         except OrderAlreadyExists:
             if existing := await self._find_by_key(data.idempotency_key):
@@ -58,6 +60,9 @@ class CreateOrder(CreateOrderPort):
             order.mark_payment_failed()
             async with self._uow as uow:
                 await uow.orders.update(order)
+                await uow.outbox.add(
+                    status_notification(order, reason="не удалось создать платёж")
+                )
                 await uow.commit()
 
         else:

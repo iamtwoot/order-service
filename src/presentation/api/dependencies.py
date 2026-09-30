@@ -5,6 +5,7 @@ from dependency_injector.wiring import Provide
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from src.application.ports.repositories import OutboxDestination
 from src.application.ports.usecases import (
     CreateOrderPort,
     GetOrderPort,
@@ -16,6 +17,7 @@ from src.application.usecases.handle_payment_callback import HandlePaymentCallba
 from src.application.usecases.handle_shipment_event import HandleShipmentEvent
 from src.application.usecases.publish_outbox_messages import PublishOutboxMessages
 from src.infrastructure.http.catalog import HttpCatalogClient
+from src.infrastructure.http.notifications import HttpNotificationsPublisher
 from src.infrastructure.http.payments import HttpPaymentsClient
 from src.infrastructure.messaging.kafka import KafkaPublisher
 from src.infrastructure.persistence.uow import SQLAlchemyUnitOfWork
@@ -59,8 +61,24 @@ class Container(containers.DeclarativeContainer):
         bootstrap_servers=settings.provided.KAFKA_BOOTSTRAP_SERVERS,
         topic=settings.provided.KAFKA_ORDER_EVENTS_TOPIC,
     )
-    publish_outbox_messages = providers.Factory(
-        PublishOutboxMessages, uow=uow, publisher=publisher
+
+    publish_order_events = providers.Factory(
+        PublishOutboxMessages,
+        uow=uow,
+        publisher=publisher,
+        destination=OutboxDestination.ORDER_EVENTS,
+    )
+
+    notifications_publisher = providers.Singleton(
+        HttpNotificationsPublisher,
+        base_url=settings.provided.CAPASHINO_URL,
+        api_token=settings.provided.CAPASHINO_API_TOKEN,
+    )
+    publish_notifications = providers.Factory(
+        PublishOutboxMessages,
+        uow=uow,
+        publisher=notifications_publisher,
+        destination=OutboxDestination.NOTIFICATIONS,
     )
 
     shipment_event_consumer = providers.Singleton(

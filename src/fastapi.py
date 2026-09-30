@@ -18,14 +18,13 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         publisher = container.publisher()
         await publisher.start()
-        outbox_worker = asyncio.create_task(
-            run_outbox_worker(container.publish_outbox_messages())
-        )
-        shipment_consumer = asyncio.create_task(
-            container.shipment_event_consumer().run()
-        )
+        tasks = [
+            asyncio.create_task(run_outbox_worker(container.publish_order_events())),
+            asyncio.create_task(run_outbox_worker(container.publish_notifications())),
+            asyncio.create_task(container.shipment_event_consumer().run()),
+        ]
         yield
-        for task in (shipment_consumer, outbox_worker):
+        for task in tasks:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task

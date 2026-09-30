@@ -28,6 +28,7 @@ class GetOrderPort(ABC):
 class PaymentCallbackInput:
     order_id: UUID
     succeeded: bool
+    error_message: str | None = None
 
 
 class HandlePaymentCallbackPort(ABC):

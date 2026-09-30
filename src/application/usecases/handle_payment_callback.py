@@ -1,11 +1,12 @@
 import logging
 
-from src.application.ports.repositories import OutboxMessage
+from src.application.ports.repositories import OutboxDestination, OutboxMessage
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import (
     HandlePaymentCallbackPort,
     PaymentCallbackInput,
 )
+from src.application.services.notifications import status_notification
 from src.domain.entities import Order, OrderStatus
 from src.domain.exceptions import OrderNotFound
 
@@ -30,6 +31,7 @@ class HandlePaymentCallback(HandlePaymentCallbackPort):
                 return
 
             await uow.orders.update(order)
+            await uow.outbox.add(status_notification(order, data.error_message))
             if order.status == OrderStatus.PAID:
                 await uow.outbox.add(_order_paid_message(order))
             await uow.commit()
@@ -38,6 +40,7 @@ class HandlePaymentCallback(HandlePaymentCallbackPort):
 
 def _order_paid_message(order: Order) -> OutboxMessage:
     return OutboxMessage(
+        destination=OutboxDestination.ORDER_EVENTS,
         key=str(order.id),
         payload={
             "event_type": "order.paid",

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -27,8 +28,14 @@ class OrderRepository(ABC):
     async def update(self, order: Order) -> None: ...
 
 
+class OutboxDestination(StrEnum):
+    ORDER_EVENTS = "order_events"
+    NOTIFICATIONS = "notifications"
+
+
 @dataclass(frozen=True)
 class OutboxMessage:
+    destination: OutboxDestination
     key: str
     payload: dict[str, Any]
     id: UUID = field(default_factory=uuid4)
@@ -39,7 +46,9 @@ class OutboxRepository(ABC):
     async def add(self, message: OutboxMessage) -> None: ...
 
     @abstractmethod
-    async def get_pending(self, limit: int) -> list[OutboxMessage]:
+    async def get_pending(
+        self, destination: OutboxDestination, limit: int
+    ) -> list[OutboxMessage]:
         """Lock returned rows until commit; rows locked by others are skipped."""
 
     @abstractmethod

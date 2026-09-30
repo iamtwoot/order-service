@@ -2,6 +2,7 @@ import logging
 from uuid import UUID
 
 from src.application.ports.messaging import MessagePublisher, PublishFailed
+from src.application.ports.repositories import OutboxDestination
 from src.application.ports.uow import UnitOfWork
 from src.application.ports.usecases import PublishOutboxMessagesPort
 
@@ -11,13 +12,19 @@ BATCH_SIZE = 100
 
 
 class PublishOutboxMessages(PublishOutboxMessagesPort):
-    def __init__(self, uow: UnitOfWork, publisher: MessagePublisher) -> None:
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        publisher: MessagePublisher,
+        destination: OutboxDestination,
+    ) -> None:
         self._uow = uow
         self._publisher = publisher
+        self._destination = destination
 
     async def __call__(self) -> int:
         async with self._uow as uow:
-            messages = await uow.outbox.get_pending(limit=BATCH_SIZE)
+            messages = await uow.outbox.get_pending(self._destination, BATCH_SIZE)
             sent: list[UUID] = []
             for message in messages:
                 try:
@@ -30,5 +37,7 @@ class PublishOutboxMessages(PublishOutboxMessagesPort):
             if sent:
                 await uow.outbox.mark_sent(sent)
                 await uow.commit()
-                logger.info("Published %d outbox messages", len(sent))
+                logger.info(
+                    "Published %d outbox messages to %s", len(sent), self._destination
+                )
             return len(sent)

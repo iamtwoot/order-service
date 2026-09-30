@@ -11,6 +11,7 @@ from src.application.ports.repositories import (
     MessageAlreadyProcessed,
     OrderAlreadyExists,
     OrderRepository,
+    OutboxDestination,
     OutboxMessage,
     OutboxRepository,
 )
@@ -55,22 +56,33 @@ class SQLAlchemyOutboxRepository(OutboxRepository):
         self._session.add(
             OutboxModel(
                 id=message.id,
+                destination=message.destination,
                 key=message.key,
                 payload=message.payload,
                 created_at=datetime.now(UTC),
             )
         )
 
-    async def get_pending(self, limit: int) -> list[OutboxMessage]:
+    async def get_pending(
+        self, destination: OutboxDestination, limit: int
+    ) -> list[OutboxMessage]:
         models = await self._session.scalars(
             select(OutboxModel)
-            .where(OutboxModel.sent_at.is_(None))
+            .where(
+                OutboxModel.destination == destination,
+                OutboxModel.sent_at.is_(None),
+            )
             .order_by(OutboxModel.created_at)
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
         return [
-            OutboxMessage(id=model.id, key=model.key, payload=model.payload)
+            OutboxMessage(
+                id=model.id,
+                destination=OutboxDestination(model.destination),
+                key=model.key,
+                payload=model.payload,
+            )
             for model in models
         ]
 
