@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src.presentation.api.dependencies import Container
+from src.container import Container
 
 router = APIRouter()
 

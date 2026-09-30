@@ -11,4 +11,4 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["sh", "-c", "alembic upgrade head && python -m bin.api"]
+CMD ["bash", "bin/run.sh"]

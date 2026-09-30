@@ -1,11 +1,7 @@
-import logging
-
 import uvicorn
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
+from src.log_config import configure_logging
 
+if __name__ == "__main__":
+    configure_logging()
     uvicorn.run("src.fastapi:create_app", factory=True, host="0.0.0.0", port=8000)
