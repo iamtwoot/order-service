@@ -78,14 +78,20 @@ src/
 │   ├── api/
 │   │   ├── routes/            # эндпоинты
 │   │   ├── schemas.py         # Pydantic-схемы запросов и ответов
-│   │   └── dependencies.py    # DI-контейнер (dependency-injector)
+│   │   └── dependencies.py    # связывание use case'ов с эндпоинтами через Depends
 │   └── workers/
+│       ├── lifecycle.py       # корректная остановка процессов по SIGTERM
 │       ├── outbox.py          # цикл outbox-воркера
 │       └── shipment_events.py # Kafka consumer событий Shipping
-├── fastapi.py                 # фабрика create_app(), запуск воркеров в lifespan
+├── container.py               # DI-контейнер (dependency-injector): сборка всех зависимостей
+├── fastapi.py                 # фабрика create_app()
+├── log_config.py              # общая настройка логирования для всех процессов
 └── settings.py                # конфигурация из переменных окружения
-bin/
-└── api.py                     # точка запуска
+bin/                           # точки запуска, каждая — отдельный процесс
+├── run.sh                     # запуск всех процессов в одном контейнере
+├── api.py                     # HTTP API
+├── outbox.py                  # outbox-воркеры: order_events и notifications
+└── consumer.py                # консьюмер событий Shipping
 ```
 
 ## Ключевые решения
@@ -111,7 +117,9 @@ Outbox используется для двух каналов (колонка `
 - Kafka consumer: битые сообщения пропускаются, при временном сбое (например, база недоступна) сообщение повторяется через `seek()`.
 - Notifications: `5xx` и сетевые ошибки повторяются, `4xx` логируются и не блокируют очередь.
 
-**Воркеры запускаются в `lifespan` FastAPI**, в одном процессе с API: сервис деплоится одним контейнером. При остановке пода воркеры корректно отменяются, а продюсер и консьюмер закрывают соединения.
+**API, outbox-воркер и консьюмер — отдельные процессы** с общим кодом и одним Docker-образом. У каждого процесса свой event loop, поэтому работа воркеров не замедляет обработку HTTP-запросов, а API не зависит от Kafka. По SIGTERM каждый процесс корректно завершается: продюсер и консьюмер закрывают соединения, консьюмер выходит из consumer group. Сейчас все три процесса работают в одном контейнере (см. «Деплой»), поэтому делят его лимиты CPU и памяти и перезапускаются вместе; для независимого масштабирования их нужно запускать отдельными деплойментами.
+
+**DI-контейнер лежит в `src/container.py`**, рядом с `fastapi.py` и `settings.py`: это общая точка сборки зависимостей для всех трёх процессов. В `presentation/api/dependencies.py` остались только привязки use case'ов к эндпоинтам через `Depends`.
 
 **Фабрика приложения лежит в `src/fastapi.py`**, как требует структура проекта. Чтобы `import fastapi` находил библиотеку, а не этот файл, импорты в проекте идут с префиксом `src.`, а в настройках ruff `fastapi` явно помечен как сторонний пакет.
 
@@ -132,7 +140,7 @@ Outbox используется для двух каналов (колонка `
 
 ```
 CAPASHINO_URL=http://student-system-capashino-web.student-system-capashino.svc:8000
-PAYMENTS_CALLBACK_URL=http://<имя-сервиса>.<namespace>.svc:8000/api/orders/payment-callback
+PAYMENTS_CALLBACK_URL=http://student-iamtwoot-order-service-web.student-iamtwoot-order-service.svc:8000/api/orders/payment-callback
 KAFKA_BOOTSTRAP_SERVERS=kafka.kafka.svc.cluster.local:9092
 ```
 
@@ -162,7 +170,9 @@ KAFKA_BOOTSTRAP_SERVERS=kafka.kafka.svc.cluster.local:9092
    ```bash
    uv sync
    uv run alembic upgrade head
-   uv run python -m bin.api
+   uv run python -m bin.api        # HTTP API
+   uv run python -m bin.outbox     # в отдельном терминале
+   uv run python -m bin.consumer   # в отдельном терминале
    ```
 
 Сервис будет доступен на `http://localhost:8000`, Swagger — на `http://localhost:8000/docs`. Локально Payments не может отправить callback на `localhost`, поэтому оплату можно проверить, вызвав `POST /api/orders/payment-callback` вручную через Swagger.
@@ -179,7 +189,16 @@ uv run mypy src
 
 ## Деплой
 
-При пуше в `main` GitHub Actions проверяет код линтерами, собирает Docker-образ, публикует его в GitHub Container Registry и отправляет запрос на деплой в LMS. Миграции применяются при старте контейнера (`alembic upgrade head`).
+При пуше в `main` GitHub Actions проверяет код линтерами, собирает Docker-образ, публикует его в GitHub Container Registry и отправляет запрос на деплой в LMS.
+
+LMS запускает один контейнер на сервис, поэтому все три процесса стартуют из `bin/run.sh`:
+
+1. применяются миграции (`alembic upgrade head`);
+2. в фоне запускаются `bin.api`, `bin.outbox` и `bin.consumer`;
+3. SIGTERM пересылается всем процессам, чтобы они корректно завершились;
+4. если любой процесс падает, скрипт останавливает остальные и выходит с ошибкой, и Kubernetes перезапускает контейнер.
+
+Образ один для всех процессов, поэтому при возможности отдельных деплойментов достаточно задать каждому свою команду: `python -m bin.api`, `python -m bin.outbox`, `python -m bin.consumer`. Миграции в этом случае нужно запускать только вместе с API.
 
 ## Текущие ограничения
 
